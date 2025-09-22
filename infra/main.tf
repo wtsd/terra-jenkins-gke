@@ -13,7 +13,7 @@ resource "google_container_cluster" "gke" {
   #location           = "us-central1-a"
   location = var.region
   
-  remove_default_pool = true
+  remove_default_node_pool = true
 
   #initial_node_count = 3
   initial_node_count = 1
@@ -28,6 +28,9 @@ resource "google_container_cluster" "gke" {
     google_project_service.compute,
     google_project_service.artifact
   ]
+
+  # Otherwise, terraform destroy doesn't work properly
+  deletion_protection = false 
 
 }
 
@@ -64,8 +67,6 @@ resource "google_artifact_registry_repository" "ar" {
   description   = "Docker Images for CI/CD"
   format        = "DOCKER"
 
-  # Delete on terraform destroy
-  force_delete = true
 }
 
 
@@ -117,23 +118,84 @@ resource "kubernetes_namespace" "apps" {
 
 # RBAC
 # https://www.jenkins.io/doc/book/installing/kubernetes/
-resource "kubernetes_manifest" "jenkins_rbac" {
-  manifest = yamldecode(file("${path.module}/jenkins_rbac.yaml"))
-  depends_on = [kubernetes_namespace.jenkins, kubernetes_namespace.apps]
+resource "kubernetes_service_account_v1" "jenkins_deployer" {
+  metadata {
+    name      = "jenkins-deployer"
+    namespace = kubernetes_namespace.jenkins.metadata[0].name
+    labels = {
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
 }
+
+resource "kubernetes_cluster_role_v1" "jenkins_deployer" {
+  metadata {
+    name = "jenkins-deployer"
+    labels = {
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+
+  rule {
+    api_groups = ["", "apps", "batch", "extensions", "networking.k8s.io"]
+    resources  = ["deployments","statefulsets","daemonsets","services","pods","pods/log",
+                  "configmaps","secrets","ingresses","jobs","cronjobs","namespaces"]
+    verbs      = ["get","list","watch","create","update","patch","delete","deletecollection"]
+  }
+
+  rule {
+    api_groups = ["rbac.authorization.k8s.io"]
+    resources  = ["roles","rolebindings","clusterroles","clusterrolebindings"]
+    verbs      = ["get","list","watch","create","update","patch","delete"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "jenkins_deployer" {
+  metadata {
+    name = "jenkins-deployer"
+    labels = {
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role_v1.jenkins_deployer.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account_v1.jenkins_deployer.metadata[0].name
+    namespace = kubernetes_namespace.jenkins.metadata[0].name
+  }
+}
+
+
+# data "helm_repository" "jenkins" {
+#   name = "jenkins"
+#   url  = "https://charts.jenkins.io"
+# }
 
 resource "helm_release" "jenkins" {
   name       = "jenkins"
   namespace  = kubernetes_namespace.jenkins.metadata[0].name
   repository = "https://charts.jenkins.io"
   chart      = "jenkins"
-  version    = "5.8.91"
+  version    = "5.8.90"
+  values     = [ file("${path.module}/jenkins-values.yaml") ]
 
-  values = [ file("${path.module}/jenkins-values.yaml") ]
+  # Make installs resilient
+  timeout            = 1800        # 30m for first image pull
+  wait               = false       # don’t block TF; we’ll verify with kubectl
+  atomic             = false       # don’t auto-rollback on slow readiness
+  dependency_update  = true
 
   depends_on = [
     google_compute_global_address.ip_jenkins,
     kubernetes_namespace.jenkins,
-    kubernetes_manifest.jenkins_rbac
+    kubernetes_service_account_v1.jenkins_deployer,
+    kubernetes_cluster_role_v1.jenkins_deployer,
+    kubernetes_cluster_role_binding_v1.jenkins_deployer
   ]
 }

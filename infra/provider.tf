@@ -31,10 +31,12 @@ data "google_client_config" "default" {}
 # https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/getting-started.html
 provider "kubernetes" {
   #host                   = "https://${data.google_container_cluster.my_cluster.endpoint}"
-  host                   = google_container_cluster.primary.endpoint
+  host                   = "https://${google_container_cluster.gke.endpoint}"
   token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(data.google_container_cluster.my_cluster.master_auth[0].cluster_ca_certificate)
+  cluster_ca_certificate = base64decode(google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
 }
+
+
 
 ## https://registry.terraform.io/providers/hashicorp/helm/latest/docs
 provider "helm" {
@@ -43,4 +45,8 @@ provider "helm" {
     token                  = data.google_client_config.default.access_token
     cluster_ca_certificate = base64decode(google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
   }
+
+  # Make it OS independent for our friends on Windows
+  repository_cache        = "${path.module}/.helmcache"
+  repository_config_path  = "${path.module}/.helmrepo.yaml"
 }

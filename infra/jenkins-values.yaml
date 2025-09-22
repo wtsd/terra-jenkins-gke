@@ -1,29 +1,39 @@
 ---
 # https://github.com/jenkinsci/helm-charts/blob/main/charts/jenkins/values.yaml
 controller:
-  installPlugins:
-    - kubernetes:latest
-    - workflow:latest-aggregator
-    - git:latest
-    - github:latest
-    - generic:latest-webhook-trigger
-    - credential:latest-binding
-    - google:latest-oauth-plugin
-    - docker:latest-workflow
-    - configuration:latest-as-code
-    - slack:latest
-    - mask:latest-passwords
-    - timestamper:latest
+  JCasC:
+    enabled: false
+    defaultConfig: false
+    configScripts: {}
   
+  #adminUser: admin
+  #adminPassword: admin
+
   serviceAccount:
     create: false
     name: jenkins-deployer
+
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - github
+    - generic-webhook-trigger
+    - credential-binding
+    - google-oauth-plugin
+    - docker-workflow
+    - configuration-as-code
+    - slack
+    - mask-passwords
+    - timestamper
+  
+
 
   ingress:
     enabled: true
     apiVersion: "networking.k8s.io/v1"
     ingressClassName: "gce"
-    hostName: "REPLACE_JENKINS_HOST"
+    hostName: "jenkins.example.com"
     annotations:
       kubernetes.io/ingress.global-static-ip-name: "gke-jenkins-ip"
       kubernetes.io/ingress.allow-http: "true"
@@ -41,9 +51,8 @@ agent:
       label: "docker"
       serviceAccount: jenkins-deployer
       containers:
-        # Docker CLI container (talks to dind over 2375)
         - name: docker
-          image: docker:28.4.0-cli
+          image: docker:27-cli
           ttyEnabled: true
           command: "cat"
           env:
@@ -54,12 +63,10 @@ agent:
           volumeMounts:
             - name: docker-graph
               mountPath: /var/lib/docker
-        # Tooling for kubectl/helm/gcloud
         - name: toolchain
           image: google/cloud-sdk:slim
           ttyEnabled: true
           command: "cat"
-        # Docker daemon (DinD) — requires privileged
         - name: dind
           image: docker:27-dind
           securityContext:
@@ -75,6 +82,7 @@ agent:
       volumes:
         - name: docker-graph
           emptyDir: {}
+
 
 
   #  python: |
