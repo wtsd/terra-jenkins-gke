@@ -112,3 +112,29 @@ resource "kubernetes_namespace" "apps" {
 }
 
 
+
+## JENKINS
+# https://dev.to/binoy_59380e698d318/setup-jenkins-on-kubernetes-with-help-of-terraform-gf1
+resource "helm_release" "jenkins" {
+  name       = "jenkins"
+  repository = "https://charts.jenkins.io"
+  chart      = "jenkins"
+  version    = "5.8.91"
+
+  # Get namespace from above
+  namespace = kubernetes_namespace.jenkins.metadata[0].name
+
+  #set {
+  #  name  = "controller.servicePort"
+  #  value = "8080"
+  #}
+  #
+  #set {
+  #  name  = "controller.admin.password"
+  #  value = "admin"
+  #}
+
+  timeout = 600
+
+  depends_on = [google_compute_global_address.ip_jenkins, kubernetes_namespace.jenkins]
+}

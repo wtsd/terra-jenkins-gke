@@ -1,0 +1,34 @@
+---
+# https://github.com/jenkinsci/helm-charts/blob/main/charts/jenkins/values.yaml
+controller:
+  installPlugins:
+    - kubernetes:latest
+    - workflow:latest-aggregator
+    - git:latest
+    - github:latest
+    - generic:latest-webhook-trigger
+    - credential:latest-binding
+    - google:latest-oauth-plugin
+    - docker:latest-workflow
+    - configuration:latest-as-code
+    - slack:latest
+    - mask:latest-passwords
+    - timestamper:latest
+  
+  ingress:
+    enabled: true
+    apiVersion: "networking.k8s.io/v1"
+    ingressClassName: "gce"
+    # Replace with an actual hostname
+    hostName: "jenkins-lab.local"
+    annotation:
+      kubernetes.io/ingress.global-static-ip-name: "gke-jenkins-ip"
+      kubernetes.io/ingress.allow-http: "true"
+    # Add cert manager from ManagedCertificates
+    tls: []
+
+  serviceType: ClusterIP
+
+  serviceAccount:
+    create: false
+    name: jenkins-deployer
