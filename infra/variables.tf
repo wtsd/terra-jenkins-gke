@@ -1,6 +1,11 @@
 # GCP:
 variable "project_id" { type = string }
-variable "region" { type = string }
-variable "zone" { type = string }
+variable "region"     { type = string }
+variable "zone"       { type = string }
 
 variable "cluster_name" { type = string default = "ci-gke"}
+variable "network"      { type = string default = "default" }
+variable "subnetwork"   { type = string default = "default" }
+
+variable "artifact_repo" { type = string default = "apps"}
+

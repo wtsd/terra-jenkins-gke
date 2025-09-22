@@ -57,3 +57,13 @@ resource "google_container_node_pool" "np" {
   }
 }
 
+
+## ARTIFACTS REGISTRY REPOSITORY
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/artifact_registry_repository
+resource "google_artifact_registry_repository" "ar" {
+  location      = var.region
+  repository_id = var.artifact_repo
+  description   = "Docker Images for CI/CD"
+  format        = "DOCKER"
+}
+
