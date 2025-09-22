@@ -1,0 +1,51 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: your-gcp-project
+      REGION: us-central1
+      CLUSTER: ci-gke
+      AR_REPO: apps
+      IMAGE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/your-app
+      RELEASE: your-app
+      NAMESPACE: apps
+      APP_HOST: app.example.com
+      STATIC_IP_NAME: gke-app-ip
+
+    # https://medium.com/@sbkapelner/building-and-pushing-to-artifact-registry-with-github-actions-7027b3e443c1
+    steps:
+      - uses: actions/checkou@v4
+
+      - name: Auth to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Config Docker and Artifacts Registry
+        run: cloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and Push image
+        env: { DOCKER_BUILDKIT: 1 }
+        run: |
+          TAG="${GITHUB_SHA::7}" # Short sha
+          helm upgrade --install "$RELEASE" ./app/charts/my-app \
+            --namespace "$NAMESPACE" \
+            --set image.repository="$IMAGE" \
+            --set image.tag="$TAG" \
+            --set ingress.enabled=true \
+            --set ingress.classNode=gce \
+            --set ingress.hosts[0].host="$APP_HOST" \
+            --set ingress.hosts[0].paths[0].path="/" \
+            --set ingress.annotations."kubernetes\\.io\ingress\\.global-static-ip-name"="$STATIC_IP_NAME" \
+            --wait --timeout 10m

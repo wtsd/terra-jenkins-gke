@@ -1,0 +1,19 @@
+---
+image:
+  repository: REPLACED_BY_CI
+  tag: latest
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: gce
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: gke-app-ip
+  hosts:
+    - host: app.example.tld # Override by CI
+      paths:
+        - path: /
+          pathType: Prefix
