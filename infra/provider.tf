@@ -23,8 +23,8 @@ terraform {
 }
 
 provider "google" {
-  project     = vars.project_id
-  region      = vars.region
+  project     = var.project_id
+  region      = var.region
 }
 
 data "google_client_config" "current" {}
