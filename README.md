@@ -14,11 +14,13 @@ gcloud auth login
 gcloud config set project <project-id>
 
 cd infra
-terraform init
-terraform apply -auto-approve \
-  -var project_id=<project-id> \
-  -var region=<region> \
-  -var jenkins_hostname=jenkins.your-host.tld
+terraform init -upgrade
+
+terraform plan -var project_id=<project-id> -var region=us-central1 -var jenkins_hostname=jenkins.example.com -var app_hostname=app.example.com \
+    -out=tfplan.binary
+
+terraform apply tfplan.binary
+
 
 # Check if everything is right
 terraform output
@@ -30,5 +32,23 @@ Don't forget to decomiission to avoid extra charges:
 ```bash
 cd infra
 terraform destroy -auto-approve
+```
+
+
+
+## Minimal repo structure
+
+```
+./Jenkinsfile
+./Dockerfile
+./.dockerignore
+./charts/
+   /your-app/           # Helm chart
+      /Chart.yaml
+         values.yaml    # override ingress.className=gce + static IP annotation 
+         templates/...
+./src/                  # app code
+│  └─ ...
+
 ```
 
