@@ -1,0 +1,29 @@
+pipeline {
+  agent { label 'docker' }
+
+  environment {
+  	PROJECT  = 'project_id'
+  	REGION   = 'us-central1'
+  	AR_REPO  = 'apps'
+  	IMAGE    = ${env.REGION}-docker.pkg.dev/${env.PROJECT}/${env.AR_REPO}/${env.JOB_NAME}"
+    TAG      = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+
+
+    CHART_PATH  = 'charts/my-app'
+    RELEASE     = 'my-app'
+    NAMESPACE   = 'apps'
+    APP_HOST    = 'app.example.com'
+    STATIC_IP   = 'gke-app-ip'
+  }
+
+  stages {
+    stage('Docker: Login') {}
+    stage('Docker: Build and Push') {}
+    stage('Kubernetes: Setup and context') {}
+    stage('Helm: Deploy') {}
+  }
+
+  post {
+  	success { echo "Deployed ${RELEASE} -> https://${APP_HOST}" }
+  }
+}

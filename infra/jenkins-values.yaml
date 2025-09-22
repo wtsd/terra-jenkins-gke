@@ -15,45 +15,67 @@ controller:
     - mask:latest-passwords
     - timestamper:latest
   
-  ingress:
-    enabled: true
-    apiVersion: "networking.k8s.io/v1"
-    ingressClassName: "gce"
-    # Replace with an actual hostname
-    hostName: "jenkins-lab.local"
-    annotation:
-      kubernetes.io/ingress.global-static-ip-name: "gke-jenkins-ip"
-      kubernetes.io/ingress.allow-http: "true"
-    # Add cert manager from ManagedCertificates
-    tls: []
-
-  serviceType: ClusterIP
-
   serviceAccount:
     create: false
     name: jenkins-deployer
 
-  JCasC:
-    defaultConfig: false
-    configScripts: 
-      basic: |
-        jenkins:
-          authorizationStrategy: loggedInUsersCanDoAnything
-          securityRealm: |-
-          local:
-            allowsSignup: false
-            enableCaptcha: false
-            users:
-            - id: "admin"
-              name: "Jenkins Admin"
-              password: "admin"
-        unclassified:
-          location:
-            url: "http://{{ .Values.controller.ingress.hostName }}/"
+  ingress:
+    enabled: true
+    apiVersion: "networking.k8s.io/v1"
+    ingressClassName: "gce"
+    hostName: "REPLACE_JENKINS_HOST"
+    annotations:
+      kubernetes.io/ingress.global-static-ip-name: "gke-jenkins-ip"
+      kubernetes.io/ingress.allow-http: "true"
+    # add cert-manager/managed cert later for HTTPS
+    tls: []  
 
-# Agent setup 
+  serviceType: ClusterIP
+
+
+# Agent setup for K8s
+# https://www.jenkins.io/doc/pipeline/steps/kubernetes/
 agent:
   podTemplates:
+    - name: "docker"
+      label: "docker"
+      serviceAccount: jenkins-deployer
+      containers:
+        # Docker CLI container (talks to dind over 2375)
+        - name: docker
+          image: docker:28.4.0-cli
+          ttyEnabled: true
+          command: "cat"
+          env:
+            - name: DOCKER_HOST
+              value: "tcp://localhost:2375"
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          volumeMounts:
+            - name: docker-graph
+              mountPath: /var/lib/docker
+        # Tooling for kubectl/helm/gcloud
+        - name: toolchain
+          image: google/cloud-sdk:slim
+          ttyEnabled: true
+          command: "cat"
+        # Docker daemon (DinD) — requires privileged
+        - name: dind
+          image: docker:27-dind
+          securityContext:
+            privileged: true
+          ttyEnabled: true
+          args: ["--host=tcp://0.0.0.0:2375","--host=unix:///var/run/docker.sock","--storage-driver=overlay2"]
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          volumeMounts:
+            - name: docker-graph
+              mountPath: /var/lib/docker
+      volumes:
+        - name: docker-graph
+          emptyDir: {}
+
 
   #  python: |
   #    - name: python
