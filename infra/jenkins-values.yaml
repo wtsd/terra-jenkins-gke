@@ -19,13 +19,8 @@ controller:
     - git
     - github
     - generic-webhook-trigger
-    - credential-binding
-    - google-oauth-plugin
+    - credentials-binding
     - docker-workflow
-    - configuration-as-code
-    - slack
-    - mask-passwords
-    - timestamper
   
 
 
