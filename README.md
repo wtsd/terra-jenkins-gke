@@ -45,10 +45,14 @@ terraform destroy -auto-approve
 ./charts/
    /your-app/           # Helm chart
       /Chart.yaml
-         values.yaml    # override ingress.className=gce + static IP annotation 
-         templates/...
+      /values.yaml    # override ingress.className=gce + static IP annotation 
+      /templates/...
 ./src/                  # app code
    ...
 
 ```
+
+- Jenkinsfile at the repo root keeps Jenkins Multibranch out-of-the-box
+- Dockerfile at root so `docker build .`` is straightforward
+- Helm chart inside the repo so the pipeline can `helm upgrade --install` straight from the same commit that produced the image
 
