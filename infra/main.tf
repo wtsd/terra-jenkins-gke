@@ -3,6 +3,17 @@ resource "google_project_service" "container" { service = "container.googleapis.
 resource "google_project_service" "compute" { service = "compute.googleapis.com" }
 resource "google_project_service" "artifact" { service = "artifactregistry.googleapis.com" }
 
+## Dependency injection
+resource "time_sleep" "after_services" {
+  depends_on = [
+    google_project_service.container,
+    google_project_service.compute,
+    google_project_service.artifact,
+  ]
+  create_duration = "60s"
+}
+
+
 
 ## GKE CLUSTER
 
@@ -23,11 +34,7 @@ resource "google_container_cluster" "gke" {
   # https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
   release_channel { channel = "REGULAR" }
 
-  depends_on = [
-    google_project_service.container,
-    google_project_service.compute,
-    google_project_service.artifact
-  ]
+  depends_on = [ time_sleep.after_services ]
 
   # Otherwise, terraform destroy doesn't work properly
   deletion_protection = false 
@@ -67,6 +74,7 @@ resource "google_artifact_registry_repository" "ar" {
   description   = "Docker Images for CI/CD"
   format        = "DOCKER"
 
+  depends_on = [ time_sleep.after_services ]
 }
 
 
@@ -75,10 +83,14 @@ resource "google_artifact_registry_repository" "ar" {
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_global_address
 resource "google_compute_global_address" "ip_app" {
   name = "gke-app-ip"
+
+  depends_on = [ time_sleep.after_services ]
 }
 
 resource "google_compute_global_address" "ip_jenkins" {
   name = "gke-jenkins-ip"
+
+  depends_on = [ time_sleep.after_services ]
 }
 
 

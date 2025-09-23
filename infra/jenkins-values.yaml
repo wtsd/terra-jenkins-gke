@@ -1,97 +1,79 @@
----
-# https://github.com/jenkinsci/helm-charts/blob/main/charts/jenkins/values.yaml
+# https://github.com/jenkinsci/helm-charts/tree/main/charts/jenkins
 controller:
+  # TODO: Add JCasC templating later once controller is up
   JCasC:
     enabled: false
     defaultConfig: false
     configScripts: {}
-  
-  #adminUser: admin
-  #adminPassword: admin
+
+  # Stable LTS image
+  image:
+    registry: docker.io
+    repository: jenkins/jenkins
+    tag: lts-jdk17
+    pullPolicy: IfNotPresent
+
+  podSecurityContext:
+    fsGroup: 1000
+  containerSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+
+  # TODO: Add plugins once everything is up
+  installPlugins: []
 
   serviceAccount:
     create: false
     name: jenkins-deployer
 
-  installPlugins:
-    - kubernetes
-    - workflow-aggregator
-    - git
-    - github
-    - generic-webhook-trigger
-    - credentials-binding
-    - docker-workflow
-  
-
-
+  # Expose via GKE Ingress on your reserved static IP
   ingress:
     enabled: true
     apiVersion: "networking.k8s.io/v1"
     ingressClassName: "gce"
-    hostName: "jenkins.example.com"
+    hostName: "jenkins.example.com"   # <-- put your real FQDN here
     annotations:
       kubernetes.io/ingress.global-static-ip-name: "gke-jenkins-ip"
       kubernetes.io/ingress.allow-http: "true"
-    # add cert-manager/managed cert later for HTTPS
-    tls: []  
+    tls: []
 
   serviceType: ClusterIP
 
-
-# Agent setup for K8s
-# https://www.jenkins.io/doc/pipeline/steps/kubernetes/
-agent:
-  podTemplates:
-    - name: "docker"
-      label: "docker"
-      serviceAccount: jenkins-deployer
-      containers:
-        - name: docker
-          image: docker:27-cli
-          ttyEnabled: true
-          command: "cat"
-          env:
-            - name: DOCKER_HOST
-              value: "tcp://localhost:2375"
-            - name: DOCKER_TLS_CERTDIR
-              value: ""
-          volumeMounts:
-            - name: docker-graph
-              mountPath: /var/lib/docker
-        - name: toolchain
-          image: google/cloud-sdk:slim
-          ttyEnabled: true
-          command: "cat"
-        - name: dind
-          image: docker:27-dind
-          securityContext:
-            privileged: true
-          ttyEnabled: true
-          args: ["--host=tcp://0.0.0.0:2375","--host=unix:///var/run/docker.sock","--storage-driver=overlay2"]
-          env:
-            - name: DOCKER_TLS_CERTDIR
-              value: ""
-          volumeMounts:
-            - name: docker-graph
-              mountPath: /var/lib/docker
-      volumes:
-        - name: docker-graph
-          emptyDir: {}
-
-
-
-  #  python: |
-  #    - name: python
-  #      label: jenkins-python
-  #      serviceAccount: jenkins
-  #      containers:
-  #        - name: python
-  #          image: python:3
-  #          command: "/bin/sh -c"
-  #          args: "cat"
-  #          ttyEnabled: true
-  #          privileged: true
-  #          resourceRequestCpu: "400m"
-  #          resourceRequestMemory: "512Mi"
-  #          resourceLimitCpu: "1"
-  #          resourceLimitMemory: "1024Mi"
+## TODO: Uncomment once cluster is up and JCaaS is enabled 
+# agent:
+#   podTemplates:
+#     - name: docker
+#       label: docker
+#       serviceAccount: jenkins-deployer
+#       containers:
+#         - name: docker
+#           image: docker:27-cli
+#           ttyEnabled: true
+#           command: "cat"
+#           env:
+#             - name: DOCKER_HOST
+#               value: "tcp://localhost:2375"
+#             - name: DOCKER_TLS_CERTDIR
+#               value: ""
+#           volumeMounts:
+#             - name: docker-graph
+#               mountPath: /var/lib/docker
+#         - name: toolchain
+#           image: google/cloud-sdk:slim
+#           ttyEnabled: true
+#           command: "cat"
+#         - name: dind
+#           image: docker:27-dind
+#           securityContext:
+#             privileged: true
+#           ttyEnabled: true
+#           args: ["--host=tcp://0.0.0.0:2375","--host=unix:///var/run/docker.sock","--storage-driver=overlay2"]
+#           env:
+#             - name: DOCKER_TLS_CERTDIR
+#               value: ""
+#           volumeMounts:
+#             - name: docker-graph
+#               mountPath: /var/lib/docker
+#       volumes:
+#         - name: docker-graph
+#           emptyDir: {}

@@ -47,6 +47,7 @@ provider "helm" {
   }
 
   # Make it OS independent for our friends on Windows
-  repository_cache        = "${path.module}/.helmcache"
-  repository_config_path  = "${path.module}/.helmrepo.yaml"
+  repository_cache       = "${path.module}/.helmcache"
+  repository_config_path = "${path.module}/.helmrepo.yaml"
 }
+

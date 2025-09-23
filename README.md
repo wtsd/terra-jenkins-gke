@@ -13,17 +13,35 @@ Quick start:
 gcloud auth login
 gcloud config set project <project-id>
 
+
+gcloud services enable container.googleapis.com \
+  artifactregistry.googleapis.com \
+  compute.googleapis.com \
+  --project <project-id>
+
 cd infra
 terraform init -upgrade
 
-terraform plan -var project_id=<project-id> -var region=us-central1 -var jenkins_hostname=jenkins.example.com -var app_hostname=app.example.com \
-    -out=tfplan.binary
+terraform apply -target=google_project_service.container \
+                -target=google_project_service.compute \
+                -target=google_project_service.artifact \
+                -target=time_sleep.after_services -auto-approve
 
-terraform apply tfplan.binary
+terraform apply -auto-approve
+
+kubectl -n jenkins get pods -w
 
 
-# Check if everything is right
-terraform output
+# cd infra
+# terraform init -upgrade
+
+# terraform plan -var project_id=<project-id> -var region=us-central1 -out=tfplan.binary
+
+# terraform apply tfplan.binary
+
+
+# # Check if everything is right
+# terraform output
 
 ```
 
