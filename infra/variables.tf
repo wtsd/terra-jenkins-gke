@@ -10,17 +10,20 @@ variable "cluster_name" {
   default = "ci-gke"
 }
 
+variable "artifact_repo" {
+  type = string
+  default = "apps"
+}
+
+################
+
 # DNS hostnames: control—point them to the Terraform outputs (IPs) after apply
 variable "jenkins_hostname" {
   type = string
   default = "jenkins.example.com"
 }
-variable "app_hostname" {
-  type = string
-  default = "app.example.com"
-}
 
-variable "artifact_repo" {
-  type = string
-  default = "apps"
-}
+# variable "app_hostname" {
+#   type = string
+#   default = "app.example.com"
+# }

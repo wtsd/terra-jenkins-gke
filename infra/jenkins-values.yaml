@@ -26,10 +26,21 @@ controller:
     create: false
     name: jenkins-deployer
 
-  serviceType: ClusterIP
+  #serviceType: ClusterIP
+  serviceType: NodePort
   serviceAnnotations:
     cloud.google.com/neg: '{"ingress": true}'
     cloud.google.com/backend-config: '{"default":"jenkins-backend"}'
+
+  startupProbe:
+    httpGet: { path: /login, port: 8080 }
+    failureThreshold: 120   # ~10 min if periodSeconds=5
+    periodSeconds: 5
+    timeoutSeconds: 3
+  readinessProbe:
+    httpGet: { path: /login, port: 8080 }
+    periodSeconds: 5
+    timeoutSeconds: 3
 
   # Expose via GKE Ingress on your reserved static IP
   ingress:

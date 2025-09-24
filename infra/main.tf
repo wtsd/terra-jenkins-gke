@@ -199,9 +199,12 @@ resource "helm_release" "jenkins" {
 
   # Make installs resilient
   timeout            = 1800        # 30m for first image pull
-  wait               = false       # don’t block TF; we’ll verify with kubectl
-  atomic             = false       # don’t auto-rollback on slow readiness
+  wait               = true
+  atomic             = true
   dependency_update  = true
+
+  force_update       = true
+  recreate_pods      = true
 
   depends_on = [
     google_compute_global_address.ip_jenkins,
