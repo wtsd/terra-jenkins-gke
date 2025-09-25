@@ -1,0 +1,5 @@
+image: registry.k8s.io/ingress-gce/404-server:1.0
+replicaCount: 1
+service:
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'

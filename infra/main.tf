@@ -19,25 +19,27 @@ resource "time_sleep" "after_services" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/container_cluster
 resource "google_container_cluster" "gke" {
-  #name               = "marcellus-wallace"
-  name = var.cluster_name
-  #location           = "us-central1-a"
-  location = var.region
+  #name                     = "marcellus-wallace"
+  name                     = var.cluster_name
+  #location                 = "us-central1-a"
+  location                 = var.region
   
   remove_default_node_pool = true
 
   #initial_node_count = 3
-  initial_node_count = 1
+  initial_node_count       = 1
+
+  networking_mode          = "VPC_NATIVE"
 
   ip_allocation_policy {}
 
   # https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels
   release_channel { channel = "REGULAR" }
 
-  depends_on = [ time_sleep.after_services ]
-
   # Otherwise, terraform destroy doesn't work properly
   deletion_protection = false 
+
+  depends_on = [ time_sleep.after_services ]
 
 }
 
@@ -108,6 +110,33 @@ resource "kubernetes_namespace" "jenkins" {
       "pod-security.kubernetes.io/audit"   = "privileged"
     }
   }
+}
+
+
+resource "kubernetes_namespace" "dev" {
+  metadata {
+    name = "dev"
+    labels = {
+      "app.kubernetes.io/managed-by"       = "terraform"
+      "pod-security.kubernetes.io/enforce" = "baseline"
+      "pod-security.kubernetes.io/warn"    = "baseline"
+      "pod-security.kubernetes.io/audit"   = "baseline"
+    }
+  }
+  depends_on = [google_container_node_pool.default]
+}
+
+resource "kubernetes_namespace" "prod" {
+  metadata {
+    name = "prod"
+    labels = {
+      "app.kubernetes.io/managed-by"       = "terraform"
+      "pod-security.kubernetes.io/enforce" = "baseline"
+      "pod-security.kubernetes.io/warn"    = "baseline"
+      "pod-security.kubernetes.io/audit"   = "baseline"
+    }
+  }
+  depends_on = [google_container_node_pool.default]
 }
 
 resource "kubernetes_namespace" "apps" {
@@ -189,12 +218,43 @@ resource "kubernetes_cluster_role_binding_v1" "jenkins_deployer" {
 #   url  = "https://charts.jenkins.io"
 # }
 
+# GCE default backend (kube-system)
+resource "helm_release" "gce_default_backend" {
+  name       = "gce-default-backend"
+  namespace  = "kube-system"
+  chart      = "${path.module}/charts/gce-default-backend"
+
+  timeout = 1800
+  wait    = true
+  atomic  = true
+
+  depends_on = [
+    google_container_node_pool.default
+  ]
+}
+
+# BackendConfig for Jekins (/login)
+resource "helm_release" "jenkins_backendconfig" {
+  name       = "jenkins-backendconfig"
+  namespace  = kubernetes_namespace.jenkins.metadata[0].name
+  chart      = "${path.module}/charts/jenkins-backendconfig"
+
+  timeout = 1800
+  wait    = true
+  atomic  = true
+
+  depends_on = [
+    google_container_node_pool.default,
+    kubernetes_namespace.jenkins
+  ]
+}
+
 resource "helm_release" "jenkins" {
   name       = "jenkins"
   namespace  = kubernetes_namespace.jenkins.metadata[0].name
   repository = "https://charts.jenkins.io"
   chart      = "jenkins"
-  version    = "5.8.90"
+  version    = "5.8.91"
   values     = [ file("${path.module}/jenkins-values.yaml") ]
 
   # Make installs resilient
@@ -206,11 +266,18 @@ resource "helm_release" "jenkins" {
   force_update       = true
   recreate_pods      = true
 
+  set {
+    name  = "controller.ingress.hostName"
+    value = var.jenkins_hostname
+  }
+
   depends_on = [
     google_compute_global_address.ip_jenkins,
     kubernetes_namespace.jenkins,
     kubernetes_service_account_v1.jenkins_deployer,
     kubernetes_cluster_role_v1.jenkins_deployer,
-    kubernetes_cluster_role_binding_v1.jenkins_deployer
+    kubernetes_cluster_role_binding_v1.jenkins_deployer,
+    helm_release.gce_default_backend,
+    helm_release.jenkins_backendconfig
   ]
 }

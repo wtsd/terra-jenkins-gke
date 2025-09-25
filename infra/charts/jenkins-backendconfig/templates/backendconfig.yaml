@@ -1,0 +1,13 @@
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: {{ .Values.name }}
+spec:
+  healthCheck:
+    type: HTTP
+    port: {{ .Values.port }}
+    requestPath: {{ .Values.requestPath }}
+    checkIntervalSec: {{ .Values.checkIntervalSec }}
+    timeoutSec: {{ .Values.timeoutSec }}
+    healthyThreshold: {{ .Values.healthyThreshold }}
+    unhealthyThreshold: {{ .Values.unhealthyThreshold }}

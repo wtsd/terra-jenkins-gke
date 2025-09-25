@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gce-default-backend
+description: Minimal default backend for GCE Ingress (404 server + Service with NEG)
+type: application
+version: 0.1.0
+appVersion: "1.0"

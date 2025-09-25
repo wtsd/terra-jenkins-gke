@@ -1,0 +1,7 @@
+name: jenkins-backend
+port: 8080
+requestPath: /login
+checkIntervalSec: 10
+timeoutSec: 5
+healthyThreshold: 2
+unhealthyThreshold: 5

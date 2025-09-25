@@ -19,19 +19,6 @@ controller:
     runAsUser: 1000
     runAsGroup: 1000
 
-  # TODO: Add plugins once everything is up
-  installPlugins: []
-
-  serviceAccount:
-    create: false
-    name: jenkins-deployer
-
-  #serviceType: ClusterIP
-  serviceType: NodePort
-  serviceAnnotations:
-    cloud.google.com/neg: '{"ingress": true}'
-    cloud.google.com/backend-config: '{"default":"jenkins-backend"}'
-
   startupProbe:
     httpGet: { path: /login, port: 8080 }
     failureThreshold: 120   # ~10 min if periodSeconds=5
@@ -42,16 +29,33 @@ controller:
     periodSeconds: 5
     timeoutSeconds: 3
 
+
+  # TODO: Add plugins once everything is up
+  installPlugins: []
+
+
+  serviceType: ClusterIP
+  #serviceType: NodePort
+  serviceAnnotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default":"jenkins-backend"}'
+
   # Expose via GKE Ingress on your reserved static IP
   ingress:
     enabled: true
     apiVersion: "networking.k8s.io/v1"
     ingressClassName: "gce"
-    hostName: "jenkins.example.com" # FQDN
+    #hostName: "jenkins.example.com" # FQDN
+    hostName: "${JENKINS_HOSTNAME}" # FQDN
     annotations:
       kubernetes.io/ingress.global-static-ip-name: "gke-jenkins-ip"
       kubernetes.io/ingress.allow-http: "true"
     tls: []
+
+
+  serviceAccount:
+    create: false
+    name: jenkins-deployer
 
 
 ## TODO: Uncomment once cluster is up and JCaaS is enabled 
