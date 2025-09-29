@@ -8,6 +8,9 @@
 - Set up Jenkins
 
 
+There is an official guide of how to create GKE: https://cloud.google.com/kubernetes-engine/docs/quickstarts/create-cluster-using-terraform 
+
+
 Quick start:
 ```bash
 gcloud auth login
