@@ -48,7 +48,7 @@ kubectl -n jenkins get pods -w
 
 ```
 
-Don't forget to decomiission to avoid extra charges:
+Don't forget to decomission to avoid extra charges:
 
 ```bash
 cd infra
@@ -57,7 +57,7 @@ terraform destroy -auto-approve
 
 
 
-## Minimal repo structure
+## Minimal apps repo structure
 
 ```
 ./Jenkinsfile
